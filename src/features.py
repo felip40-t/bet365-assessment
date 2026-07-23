@@ -19,7 +19,6 @@ COLD_START_PRIOR = {"goals_for": 1.35, "goals_against": 1.35}
 FORM_WINDOW = 5
 MIN_MATCHES = 5
 BASE_STATS = ["goals_for", "goals_against", "xg_for", "xg_against"]
-LEAK_COLS = ["goals_for", "goals_against", "xg_for", "xg_against", "total_goals"]
 META_COLS = ["match_id", "date", "season", "league_name", "game_week",
              "team_id", "team", "opp_team_id", "opp_team", "venue"]
 LABEL_COLS = ["goals_for", "goals_against", "total_goals"]
@@ -135,7 +134,7 @@ def add_promotion_flag(df: pd.DataFrame) -> pd.DataFrame:
     team_seasons["division_rank"] = team_seasons.league_name.map(LEAGUE_RANK)
     prev_rank = team_seasons.groupby("team_id")["division_rank"].shift(1)
     team_seasons["promoted"] = (prev_rank.notna() & (team_seasons.division_rank > prev_rank)).astype(int)
-    team_seasons["relegated"] = (prev_rank.notna() & (team_seasons.division_rank < prev_rank)).astype(int) 
+    team_seasons["relegated"] = (prev_rank.notna() & (team_seasons.division_rank < prev_rank)).astype(int)
     team_seasons = team_seasons[["team_id", "season", "promoted", "relegated"]]
 
     for prefix, id_col in [("home", "home_id"), ("away", "away_id")]:
@@ -166,8 +165,8 @@ def _attach_promotion(long: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
 def _team_feature_cols() -> list[str]:
     return ([f"roll{FORM_WINDOW}_{stat}" for stat in BASE_STATS]
             + ["promoted", "relegated", "team_cold", "xg_missing"])
- 
- 
+
+
 def add_opponent(long: pd.DataFrame) -> pd.DataFrame:
     """
     Self-join on match_id so each team-match row also carries its opponent's
@@ -225,7 +224,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     long = add_rolling(long)
     long = apply_xg_fallback(long)
     long = fill_cold_start(long)
- 
+
     team_feats = _team_feature_cols()
     out = add_opponent(long)
     out = out.rename(columns={c: f"own_{c}" for c in team_feats})
@@ -242,7 +241,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     out["xg_fallback"] = (out.own_xg_missing | out.opp_xg_missing).astype(int)
     out = out.drop(columns=["own_team_cold", "opp_team_cold",
                             "own_xg_missing", "opp_xg_missing"])
- 
+
     out = out.drop(columns=["xg_for", "xg_against"], errors="ignore")
     selector = list(dict.fromkeys(META_COLS + FEATURE_COLS + LABEL_COLS))
     out = out[[c for c in selector if c in out.columns]]

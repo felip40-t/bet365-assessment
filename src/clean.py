@@ -17,9 +17,11 @@ GOAL_COLS = ["home_goals", "away_goals"]
 XG_COLS = ["home_xg", "away_xg"]
 ABSURD_GOAL_THRESHOLD = 20
 
-def clean(df: pd.DataFrame) -> (pd.DataFrame, dict):
+def clean(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     """
-    Inspect data.
+    Clean the raw match data: parse dates, coerce dtypes, canonicalise team
+    names, and drop voids/duplicates. Returns the cleaned frame and a dict of
+    dropped-row counts by reason.
     """
     print("\n" + "=" * 20 + f"\nClean\n" + "=" * 20)
     dropped = {}
@@ -41,7 +43,7 @@ def clean(df: pd.DataFrame) -> (pd.DataFrame, dict):
     print("  league_name:", sorted(df["league_name"].dropna().unique()))
     print("  season:", sorted(df["season"].dropna().unique()))
 
-    # Check goals and game week 
+    # Check goals and game week
     for col in GOAL_COLS + ["game_week"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
     for col in XG_COLS:
@@ -50,7 +52,7 @@ def clean(df: pd.DataFrame) -> (pd.DataFrame, dict):
         if lost.any():
             print(f"[{col}] {lost.sum()} unparseable value(s) set to NaN.")
         df[col] = coerced.astype("Float64")
-    
+
     # Check flags
     for col in FLAG_COLS:
         num = pd.to_numeric(df[col], errors="coerce")
@@ -113,7 +115,7 @@ def clean(df: pd.DataFrame) -> (pd.DataFrame, dict):
     absurd = (df[GOAL_COLS] > ABSURD_GOAL_THRESHOLD).any(axis=1)
     if absurd.any():
         print(f"[goals] {absurd.sum()} row(s) with absurdly high goals (> {ABSURD_GOAL_THRESHOLD}) flagged but kept.")
-    
+
     return df, dropped
 
 
@@ -135,12 +137,12 @@ def summary(df: pd.DataFrame, dropped: dict) -> None:
     for reason, count in dropped.items():
         print(f"  {reason}: {count}")
 
-    
+
 def main() -> None:
     if not INPUT_PATH.exists():
         raise FileNotFoundError(
             f"Input file not found: {INPUT_PATH.resolve()}. "
-            f"Place match_data.csv next to this script."
+            f"Place the raw match_data.csv at {INPUT_PATH}."
         )
     df = pd.read_csv(INPUT_PATH)
     cleaned_df, dropped = clean(df)

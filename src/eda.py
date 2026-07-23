@@ -52,7 +52,7 @@ def total_xg_distribution(df: pd.DataFrame) -> None:
 
 def goal_rates_by_league(df: pd.DataFrame) -> None:
     """
-    Plot the average goal rates by league.
+    Print the average goal rates by league.
     """
     print("\n" + "=" * 20 + f"\nGoal Rates by League\n" + "=" * 20)
     goal_rates = df.groupby("league_name")[["home_goals", "away_goals"]].mean()
@@ -103,6 +103,7 @@ def xg_missingness_by_league_season(df: pd.DataFrame) -> None:
 
 
 def main() -> None:
+    PLOT_PATH.mkdir(parents=True, exist_ok=True)
     df = pd.read_csv(DATA_PATH)
     total_goals_distribution(df)
     total_xg_distribution(df)

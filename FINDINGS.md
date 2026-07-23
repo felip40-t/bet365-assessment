@@ -63,9 +63,9 @@ Same-match xG (`home_xg`, `away_xg`) is a **post-match** quantity (known only
 after kick-off), so it is treated as strictly off-limits as a feature. It
 enters the model **only** as a team's rolling average over its **previous**
 matches (`shift(1)` within `(team_id, season)`), never for the match being
-predicted. The raw `home_xg` / `away_xg` columns and the same-match goals are
-listed in `LEAK_COLS` and a build-time assertion in `features.py` fails if any
-of them reach `FEATURE_COLS`. Where a team's rolling xG is unavailable (the
+predicted. The raw `home_xg` / `away_xg` columns and the same-match goals never
+enter `FEATURE_COLS`, which is built only from pre-match rolling features and
+context flags. Where a team's rolling xG is unavailable (the
 2018/19 gap), it falls back to that team's rolling *goals* and sets an
 `xg_fallback` flag, so a missing pre-match average is marked, not silently
 zeroed. All rolling means use `shift(1)`, so no feature ever reads the current or
@@ -153,10 +153,9 @@ recombining, a diagnostic on the two-Poisson construction):
 
 ## Strengths
 
-- **Leak-free construction.** Features are forward-only, the walk-forward
-  baselines are computed per fold from earlier seasons only, and a build-time
-  assertion suite (two rows per match, goals summing to the total, no NaNs or
-  leak columns in the feature set) stops a malformed matrix from being written.
+- **Leak-free construction.** Features are forward-only (`shift(1)` rolling means
+  within `(team_id, season)`), and the walk-forward baselines are computed per
+  fold from earlier seasons only, so no step reads the current or a future match.
 - **Consistency across folds.** The model is below the naive baseline on all 7
   folds, so the difference does not rest on a single test season.
 - **Full predictive distribution.** The Poisson total gives Over/Under
@@ -209,8 +208,7 @@ is reproducible without re-running the pipeline.
 - **`features.py`**: `…_clean.csv` → `data/processed/features.csv`. Reshapes to two rows
   per match, builds `shift(1)` rolling form per `(team_id, season)`, applies the
   xG-goals fallback and constant cold-start fill, attaches promotion/relegation
-  and opponent features, and runs the leakage/shape assertion suite. Emits 16
-  features.
+  and opponent features. Emits 16 features.
 - **`train.py`**: `features.csv` → `data/processed/predictions.csv`. One-hot
   league plus the feature set, an expanding-window walk-forward that fits a fresh
   Poisson GLM per fold, predictions recombined to match-level lambdas and stacked
